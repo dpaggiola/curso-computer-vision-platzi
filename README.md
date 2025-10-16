@@ -31,22 +31,25 @@ Seguimiento de centroides: Esta técnica asocia cada detección a una trayectori
 
 Líneas virtuales de cruce: Se implementan líneas invisibles en la imagen que, al ser atravesadas, permiten contar entradas y salidas desde diferentes direcciones.
 
-### Ejemplo conceptual de implementación
+```
+# Ejemplo conceptual de implementación
 import cv2
 import numpy as np
 
-### Configurar detector YOLO
+# Configurar detector YOLO
 yolo = cv2.dnn.readNetFromDarknet("yolov3.cfg", "yolov3.weights")
 
-### Definir líneas virtuales para conteo
+# Definir líneas virtuales para conteo
 linea_entrada = [(200, 0), (200, 400)]
 linea_salida = [(400, 0), (400, 400)]
 
-### Función para tracking de centroides
+# Función para tracking de centroides
 def seguir_centroides(detecciones, centroides_previos):
     # Algoritmo de asociación
     # ...
     return centroides_actualizados
+```
+    
 Este enfoque integrado permite no solo contar personas con precisión, sino también analizar patrones de movimiento, tiempos de permanencia y zonas de mayor interés.
 
 Aplicaciones prácticas de Computer Vision en entornos comerciales
@@ -141,6 +144,7 @@ Amplio conjunto de herramientas que incluyen detección de bordes, reconocimient
 Comunidad activa que constantemente genera tutoriales y documentación actualizada
 Para comenzar a trabajar con OpenCV en Python, necesitamos instalar la biblioteca y realizar algunas importaciones básicas:
 
+```
 # Instalación (si no está instalada)
 # pip install opencv-python matplotlib
 
@@ -170,11 +174,14 @@ if image is not None:
     plt.show()
 else:
     print("No se pudo cargar la imagen")
+```
+    
 Es importante destacar que OpenCV maneja las imágenes en formato BGR (Blue, Green, Red), mientras que la mayoría de las otras bibliotecas, como Matplotlib, utilizan el formato RGB (Red, Green, Blue). Por esta razón, es necesario realizar una conversión de color cuando se trabaja con ambas bibliotecas simultáneamente.
 
 Captura y visualización de video en tiempo real
 Para capturar video desde una webcam, OpenCV ofrece una interfaz sencilla:
 
+```
 # Iniciar la captura de video (0 para la primera cámara, 1 para la segunda, etc.)
 cap = cv2.VideoCapture(1)
 
@@ -199,9 +206,12 @@ else:
     # Liberar el objeto de captura y cerrar ventanas
     cap.release()
     cv2.destroyAllWindows()
+```
+    
 Carga de videos pregrabados
 De manera similar, podemos cargar y reproducir videos almacenados en el disco:
 
+```
 # Cargar un video desde archivo
 video_path = "data/video_tienda.mp4"
 cap = cv2.VideoCapture(video_path)
@@ -227,10 +237,13 @@ else:
     # Liberar el objeto de captura y cerrar ventanas
     cap.release()
     cv2.destroyAllWindows()
+```
+    
 ¿Qué técnicas de mejora y anotación podemos aplicar a las imágenes?
 Ajuste de brillo y contraste
 Para mejorar la calidad visual de las imágenes, especialmente en condiciones de iluminación variable, podemos ajustar el brillo y el contraste:
 
+```
 # Ajustar brillo y contraste
 contrast_factor = 1.2  # Mayor que 1 aumenta el contraste
 brightness_value = 30  # Valor positivo aumenta el brillo
@@ -333,4 +346,90 @@ plt.axis('off')
 
 plt.tight_layout()
 plt.show()
+```
+
 El procesamiento de imágenes con OpenCV ofrece un mundo de posibilidades para el análisis visual en entornos comerciales. Desde el seguimiento del flujo de clientes hasta la identificación de zonas de alto tráfico, estas técnicas pueden proporcionar información valiosa para la toma de decisiones estratégicas. ¿En qué situaciones específicas aplicarías estas técnicas de procesamiento de imágenes? Comparte tus ideas y experiencias en los comentarios.
+
+## Clase 4
+Resumen
+
+La seguridad visual mediante análisis de video se ha convertido en una herramienta fundamental para entender el comportamiento de los clientes en espacios comerciales. A través de técnicas de procesamiento de imágenes y detección de movimiento, podemos generar mapas de calor que revelan patrones de interés y flujo de personas, proporcionando información valiosa para la toma de decisiones estratégicas en retail. Veamos cómo implementar esta tecnología y qué beneficios ofrece para optimizar la disposición de productos y mejorar la experiencia del cliente.
+
+¿Cómo crear mapas de calor a partir de videos de seguridad?
+El desafío de Vision Security para ILAC consiste en analizar un video de los pasillos de una tienda para determinar dónde se detienen los clientes, cuánto tiempo permanecen en cada posición y qué están observando. El producto final es un mapa de calor que visualiza estas concentraciones de actividad.
+
+Para este proyecto, podemos utilizar Google Colab o trabajar localmente. Google Colab ofrece algunas ventajas, como el acceso a GPU para procesamiento más rápido, aunque tiene limitaciones para la visualización de video en tiempo real. Sin embargo, para el análisis de videos pregrabados, funciona perfectamente.
+
+El proceso básico incluye:
+
+Cargar el video mediante OpenCV.
+Utilizar técnicas de detección de movimiento para identificar áreas de actividad.
+Acumular esta información en un mapa de calor.
+Normalizar y visualizar los resultados.
+¿Qué herramientas necesitamos para el análisis de video?
+Para implementar esta solución, necesitamos las siguientes bibliotecas:
+
+```
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+```
+
+OpenCV nos proporciona un método especialmente útil para detectar movimiento entre frames a lo largo del video. Este método puede extraer el fondo y resaltar solo lo que se está moviendo, ya sean personas, animales o incluso objetos como cortinas.
+
+El método recibe tres parámetros principales:
+
+History: número de frames utilizados para distribuir el fondo
+Sensibilidad: para detectar cambios (distinguiendo entre movimientos menores y significativos)
+Detección de sombras: para considerar o ignorar las sombras en el análisis
+
+¿Cómo se genera y se interpreta un mapa de calor?
+El proceso para generar el mapa de calor consiste en:
+1. Iniciar un acumulador en cero.
+2. Sustraer el fondo de cada frame para determinar las áreas de movimiento.
+3. Acumular la máscara de movimiento a lo largo del tiempo.
+4. Superponer esta información acumulada sobre el video original.
+
+   
+El resultado es un mapa donde las áreas de color rojo más intenso representan lugares donde los clientes permanecieron más tiempo. Por ejemplo, si un cliente estuvo parado mucho tiempo en una posición específica, esa área aparecerá con un rojo más intenso en el mapa.
+
+```
+# Ejemplo conceptual del código
+fgbg = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
+heatmap = np.zeros((height, width), dtype=np.float32)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    
+    # Aplicar sustracción de fondo
+    fgmask = fgbg.apply(frame)
+    
+    # Acumular la máscara en el mapa de calor
+    heatmap += fgmask
+```
+    
+### ¿Cómo normalizar los mapas de calor para una mejor interpretación?
+En entornos con mucho flujo de personas, como centros comerciales, el mapa de calor podría saturarse y verse completamente rojo. Para solucionar esto, se aplica una normalización:
+
+Se toma el valor mínimo y se lleva a cero.
+El valor máximo obtenido en el mapa se lleva a 255.
+Esto permite una mejor visualización de las diferencias relativas en la concentración de actividad. Además, podemos utilizar diferentes escalas de color, como "viridis" (azul-violeta), para mejorar la interpretación visual.
+
+```
+# Normalización del mapa de calor
+normalized_heatmap = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX)
+Esta normalización nos ayuda a identificar áreas de mayor interés para los clientes, lo que puede informar decisiones sobre la ubicación de productos o la reorganización del espacio comercial.
+```
+
+¿Qué limitaciones tiene esta técnica y cómo superarlas?
+Una limitación importante de este enfoque es que detecta cualquier movimiento, no solo el de las personas. Esto puede generar resultados engañosos cuando hay objetos en movimiento en la escena.
+
+Por ejemplo, en el segundo video analizado (un parque con personas), una cuerda en movimiento generó una concentración alta en el mapa de calor, desviando la atención del flujo real de personas.
+
+Este problema ocurre porque el método de sustracción de fondo detecta cualquier cambio en la escena, sin distinguir entre tipos de objetos. Para aplicaciones centradas en el comportamiento humano, necesitamos filtrar específicamente el movimiento de personas.
+
+La solución a este problema se encuentra en técnicas más avanzadas de visión por computadora, como la detección de personas mediante modelos de aprendizaje profundo. Estos modelos pueden identificar específicamente figuras humanas y seguir su movimiento, ignorando otros objetos en movimiento.
+
+El análisis de video para seguridad y marketing ofrece información valiosa sobre el comportamiento de los clientes en espacios comerciales. Mediante la creación de mapas de calor, podemos identificar áreas de mayor interés y optimizar la disposición de productos. Aunque la técnica básica tiene limitaciones, como la detección indiscriminada de movimiento, existen soluciones avanzadas que permiten enfocarse específicamente en el comportamiento humano. ¿Has implementado alguna vez análisis de video en tu negocio? ¿Qué insights has obtenido? Comparte tu experiencia en los comentarios.
