@@ -433,3 +433,159 @@ Este problema ocurre porque el método de sustracción de fondo detecta cualquie
 La solución a este problema se encuentra en técnicas más avanzadas de visión por computadora, como la detección de personas mediante modelos de aprendizaje profundo. Estos modelos pueden identificar específicamente figuras humanas y seguir su movimiento, ignorando otros objetos en movimiento.
 
 El análisis de video para seguridad y marketing ofrece información valiosa sobre el comportamiento de los clientes en espacios comerciales. Mediante la creación de mapas de calor, podemos identificar áreas de mayor interés y optimizar la disposición de productos. Aunque la técnica básica tiene limitaciones, como la detección indiscriminada de movimiento, existen soluciones avanzadas que permiten enfocarse específicamente en el comportamiento humano. ¿Has implementado alguna vez análisis de video en tu negocio? ¿Qué insights has obtenido? Comparte tu experiencia en los comentarios.
+
+## Clase 5
+Resumen
+
+La segmentación de imágenes con YOLO representa una de las técnicas más avanzadas en visión por computadora, permitiendo identificar y delimitar objetos específicos en tiempo real. Esta tecnología no solo detecta objetos, sino que también crea máscaras precisas que los separan del fondo, ofreciendo aplicaciones revolucionarias en campos como la robótica, la vigilancia y el análisis de video.
+
+### ¿Qué es YOLO y por qué es importante para la segmentación de imágenes?
+YOLO (You Only Look Once) es un algoritmo de detección de objetos que analiza una imagen en una sola pasada, lo que le permite ser extremadamente rápido. Actualmente, la empresa Ultralytics está desarrollando nuevas versiones de YOLO, ofreciendo una librería de código abierto con una gran comunidad de soporte.
+
+Las características principales de YOLO incluyen:
+- Procesamiento en tiempo real
+- Segmentación de imágenes
+- Detección de objetos
+- Identificación de puntos característicos del cuerpo
+
+La popularidad de YOLO se debe a su eficiencia y versatilidad, permitiendo implementaciones en diversos dispositivos, desde potentes GPUs hasta sistemas con recursos limitados como CPUs estándar.
+
+### ¿Cómo implementar la segmentación con YOLO en tiempo real?
+Para implementar la segmentación con YOLO necesitamos algunas herramientas fundamentales:
+- OpenCV para el procesamiento de imágenes
+- NumPy para operaciones matemáticas
+- Ultralytics para acceder a los modelos YOLO
+
+Si aún no tienes instalada la librería Ultralytics, puedes hacerlo con un simple comando de instalación mediante pip.
+
+Selección del modelo adecuado
+Para la segmentación, utilizaremos YOLOv11 en su versión "nano", que es el modelo más pequeño disponible. Esta elección es ideal cuando trabajamos con CPUs en lugar de GPUs, ya que requiere menos recursos computacionales.
+
+```
+# Importar las librerías necesarias
+import cv2
+import numpy as np
+from ultralytics import YOLO
+
+# Cargar el modelo YOLOv11 nano
+model = YOLO('yolov11n.pt')
+
+# Configurar la fuente de video (0 para la cámara principal, 1 para la segunda cámara)
+cap = cv2.VideoCapture(1)
+
+# Configurar la resolución
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+```
+
+Procesamiento de frames y medición de latencia
+Un aspecto importante al trabajar con segmentación en tiempo real es medir la latencia, es decir, cuánto tiempo tarda el sistema en procesar cada frame:
+
+```
+while True:
+    # Capturar frame
+    ret, frame = cap.read()
+    
+    # Medir tiempo de inicio
+    start_time = time.time()
+    
+    # Procesar el frame con YOLO
+    results = model(frame)
+    
+    # Calcular latencia
+    latency = time.time() - start_time
+    
+    # Mostrar FPS
+    cv2.putText(frame, f"Latencia: {latency:.3f}s", (10, 30), 
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+```
+
+Visualización de bounding boxes y segmentación
+La segmentación con YOLO proporciona dos elementos principales:
+
+1. Bounding boxes: Rectángulos que encierran los objetos detectados
+2. Máscaras de segmentación: Áreas coloreadas que delimitan exactamente la forma del objeto
+
+```
+# Acceder a las detecciones
+for r in results:
+    boxes = r.boxes
+    masks = r.masks
+    
+    # Procesar cada detección
+    for i, box in enumerate(boxes):
+        # Obtener coordenadas del bounding box
+        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        
+        # Obtener confianza y clase
+        confidence = float(box.conf[0])
+        class_id = int(box.cls[0])
+        
+        # Dibujar bounding box
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        
+        # Añadir etiqueta
+        label = f"{class_names[class_id]}: {confidence:.2f}"
+        cv2.putText(frame, label, (x1, y1 - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+```
+
+Creación y aplicación de máscaras de segmentación
+La parte más distintiva de la segmentación es la creación de máscaras que se superponen a la imagen original:
+
+```
+# Procesar máscaras de segmentación
+if masks is not None:
+    for i, mask in enumerate(masks):
+        # Redimensionar la máscara al tamaño del frame
+        mask_image = mask.data.cpu().numpy()
+        mask_image = cv2.resize(mask_image, (frame.shape[1], frame.shape[0]))
+        
+        # Crear máscara booleana
+        mask_bool = mask_image > 0.5
+        
+        # Generar color aleatorio para la máscara
+        color = np.random.randint(0, 255, 3, dtype=np.uint8)
+        
+        # Aplicar color a la máscara
+        colored_mask = np.zeros_like(frame)
+        colored_mask[mask_bool] = color
+        
+        # Combinar máscara con el frame original
+        frame = cv2.addWeighted(frame, 1, colored_mask, 0.5, 0)
+```
+
+### ¿Cómo filtrar objetos específicos en la segmentación?
+Una de las ventajas de YOLO es la capacidad de filtrar objetos específicos según nuestras necesidades. Podemos hacerlo de dos maneras:
+
+Filtrado por confianza
+Podemos establecer un umbral de confianza para mostrar solo las detecciones con alta probabilidad:
+
+```
+# Configurar umbral de confianza
+confidence_threshold = 0.7
+
+# Filtrar detecciones por confianza
+results = model(frame, conf=confidence_threshold)
+```
+
+Filtrado por clase de objeto
+YOLO viene preentrenado para detectar 80 categorías diferentes de objetos. Podemos filtrar para mostrar solo las clases que nos interesan:
+
+```
+# Clases de interés (0 = persona, 13 = silla)
+classes_of_interest = [0, 13]
+
+# Filtrar por clase y confianza
+results = model(frame, conf=0.7, classes=classes_of_interest)
+```
+
+El modelo preentrenado de YOLO asigna un número a cada categoría de objeto. Por ejemplo:
+- 0: Persona
+- 13: Silla
+- 41: Taza
+- 77: Oso de peluche
+  
+Esto permite una gran flexibilidad para aplicaciones específicas, como sistemas de seguridad que solo detecten personas o aplicaciones de inventario que se centren en productos particulares.
+
+La segmentación con YOLO representa una herramienta poderosa para el análisis de imágenes, combinando velocidad y precisión en un solo sistema. Su capacidad para procesar video en tiempo real y generar máscaras precisas abre un mundo de posibilidades para desarrolladores e investigadores. ¿Has probado implementar YOLO en alguno de tus proyectos? Comparte tu experiencia en los comentarios.
