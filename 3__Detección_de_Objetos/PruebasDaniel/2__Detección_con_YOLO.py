@@ -4,17 +4,19 @@ from ultralytics import YOLO
 
 
 # Cargar el modelo YOLO v11
+# La n es por nano, que es el modelo mas liviano
+# En este caso esta con la extension .pt porque ya esta descargado localmente el modelo
 model = YOLO("yolo11n.pt")
 
-# Iniciar la captura de video
+# Cargar el video
 cap = cv2.VideoCapture('Fausti ej 1 cam 1 - Gabriel Barla (360p, h264).mp4')
 
 # Configurar la ventana para que se muestre en pantalla completa
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
-while cap.isOpened():
-    ret, frame = cap.read()
+while cap.isOpened(): # Mientras este reproduciendo
+    ret, frame = cap.read() # 'ret' es un booleano indicando si se leyo correctamente y 'frame' es el frame actual.
     if not ret:
         break
 
@@ -22,10 +24,11 @@ while cap.isOpened():
     start_time = time.time()
     
     # Realizar la detección en el frame
+    # Es el modelo de YOLO que se ejecuta sobre un solo frame. 
     results = model(
         frame, 
-        #conf=0.4,
-        #classes=[0]
+        #conf=0.4,     # Es el umbral de confianza minimo para que el modelo muestre una prediccion
+        #classes=[0]   # El modelo solo detecta objetos de la clase 0 de YOLO. En este caso corresponde a Person.
         )
     
     # Calcular la latencia en milisegundos
@@ -35,11 +38,19 @@ while cap.isOpened():
     boxes_obj = results[0].boxes
 
     # Si se detectaron objetos, extraer información y dibujar sobre el frame
+    # Solo se ejecuta en el caso de detectar un objeto de la/las clases indicadas
+    # El boxex_obj es el objeto que contiene las detecciones hechas por el modelo.
     if boxes_obj is not None and len(boxes_obj) > 0:
         # Extraer las cajas delimitadoras, las puntuaciones de confianza y los índices de clase
         bboxes = boxes_obj.xyxy.cpu().numpy()   # Formato: [x1, y1, x2, y2] para cada detección
         confs = boxes_obj.conf.cpu().numpy()      # Puntajes de confianza
         classes = boxes_obj.cls.cpu().numpy()     # Índices de clase
+
+        # bboxes -> son las coordenadas de las cajas delimitadoreas. 
+                    # (x1, y1) es la esquina superior izquierda de la caja.
+                    # (x2, y2) es la esquina inferior derecha de la caja.
+        # confs -> es la confianza en cada deteccion
+        # classes -> es la clase detectada
         
         # Iterar sobre cada detección y dibujarla en el frame
         for i, box in enumerate(bboxes):
