@@ -1,0 +1,6 @@
+train: "Labelling de conos_escalera y arco/train/images"
+val: "Labelling de conos_escalera y arco/val/images"
+test: "Labelling de conos_escalera y arco/test/images"
+
+nc: 3
+names: ["cone", "goal", "ladder"]
